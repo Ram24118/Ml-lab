@@ -1,0 +1,111 @@
+import pandas as pd
+
+# Load dataset
+df = pd.read_csv(r"C:\Users\kalva\Downloads\naive_bayes_dataset.csv")
+
+# Target column and attributes
+target = df.columns[-1]
+attributes = list(df.columns[:-1])
+
+# Split into training and testing data (80:20)
+n = int(0.8 * len(df))
+
+train = df.iloc[:n]
+test = df.iloc[n:]
+
+print("Target:", target)
+print("Training rows:", len(train))
+print("Testing rows:", len(test))
+
+# -----------------------------
+# Calculate Prior Probabilities
+# -----------------------------
+classes = train[target].unique()
+
+priors = {}
+
+for c in classes:
+    priors[c] = len(train[train[target] == c]) / len(train)
+
+print("\nPrior Probabilities")
+for c in priors:
+    print(c, ":", priors[c])
+
+# -----------------------------
+# Calculate Likelihoods
+# -----------------------------
+likelihood = {}
+
+for att in attributes:
+
+    likelihood[att] = {}
+
+    values = train[att].unique()
+
+    for value in values:
+
+        likelihood[att][value] = {}
+
+        for c in classes:
+
+            total = len(train[train[target] == c])
+
+            count = len(train[(train[att] == value) &
+                              (train[target] == c)])
+
+            # Laplace Smoothing
+            likelihood[att][value][c] = (count + 1) / (total + len(values))
+
+# -----------------------------
+# Prediction Function
+# -----------------------------
+def predict(instance):
+
+    probabilities = {}
+
+    for c in classes:
+
+        prob = priors[c]
+
+        for att in attributes:
+
+            value = instance[att]
+
+            if value in likelihood[att]:
+                prob *= likelihood[att][value].get(c, 1)
+            else:
+                prob *= 1
+
+        probabilities[c] = prob
+
+    return max(probabilities, key=probabilities.get)
+
+# -----------------------------
+# Testing
+# -----------------------------
+predictions = []
+
+print("\nPredictions")
+for i, row in test.iterrows():
+
+    pred = predict(row)
+    actual = row[target]
+
+    predictions.append(pred)
+
+    print("Actual:", actual, " Predicted:", pred)
+
+# -----------------------------
+# Accuracy
+# -----------------------------
+correct = 0
+
+for i in range(len(test)):
+    if predictions[i] == test.iloc[i][target]:
+        correct += 1
+
+accuracy = (correct / len(test)) * 100
+
+print("\nCorrect Predictions:", correct)
+print("Total Test Samples:", len(test))
+print("Accuracy = {:.2f}%".format(accuracy))
