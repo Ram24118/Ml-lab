@@ -1,0 +1,98 @@
+Naive bayes
+
+import pandas as pd
+import numpy as np
+from collections import defaultdict
+
+class NaiveBayes:
+    def __init__(self):
+        self.classes = None
+        self.priors = {}
+        self.means = {}
+        self.variances = {}
+
+    def fit(self, X, y):
+        self.classes = np.unique(y)
+
+        for c in self.classes:
+            X_c = X[y == c]
+            self.priors[c] = len(X_c) / len(X)
+
+            self.means[c] = np.mean(X_c, axis=0)
+            self.variances[c] = np.var(X_c, axis=0) + 1e-9
+
+    def gaussian_probability(self, x, mean, var):
+        exponent = np.exp(-((x - mean) ** 2) / (2 * var))
+        return (1 / np.sqrt(2 * np.pi * var)) * exponent
+
+    def predict(self, X):
+        predictions = []
+
+        for x in X:
+            posteriors = {}
+
+            for c in self.classes:
+                prior = np.log(self.priors[c])
+
+                likelihood = np.sum(
+                    np.log(self.gaussian_probability(
+                        x,
+                        self.means[c],
+                        self.variances[c]
+                    ))
+                )
+
+                posteriors[c] = prior + likelihood
+
+            predictions.append(max(posteriors, key=posteriors.get))
+
+        return np.array(predictions)
+
+
+# -----------------------------
+# Load Dataset
+# -----------------------------
+data = pd.read_csv("iris.csv")
+
+# Features and Target
+X = data.iloc[:, :-1].values
+y = data.iloc[:, -1].values
+
+# Train-Test Split (80:20)
+np.random.seed(42)
+indices = np.random.permutation(len(X))
+
+train_size = int(0.8 * len(X))
+
+train_idx = indices[:train_size]
+test_idx = indices[train_size:]
+
+X_train = X[train_idx]
+X_test = X[test_idx]
+
+y_train = y[train_idx]
+y_test = y[test_idx]
+
+# -----------------------------
+# Train Model
+# -----------------------------
+model = NaiveBayes()
+model.fit(X_train, y_train)
+
+# -----------------------------
+# Prediction
+# -----------------------------
+predictions = model.predict(X_test)
+
+# -----------------------------
+# Accuracy
+# -----------------------------
+accuracy = np.mean(predictions == y_test)
+
+print("Actual Labels:")
+print(y_test)
+
+print("\nPredicted Labels:")
+print(predictions)
+
+print("\nAccuracy:", round(accuracy * 100, 2), "%")
