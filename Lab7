@@ -1,0 +1,46 @@
+import pandas as pd
+import numpy as np
+from hmmlearn.hmm import CategoricalHMM
+
+start_prob = np.array([0.6, 0.4])
+
+trans_prob = np.array([
+    [0.7, 0.3],
+    [0.4, 0.6]
+])
+
+emission_prob = np.array([
+    [0.2, 0.4, 0.4],
+    [0.5, 0.4, 0.1]
+])
+
+model = CategoricalHMM(n_components=2)
+model.startprob_ = start_prob
+model.transmat_ = trans_prob
+model.emissionprob_ = emission_prob
+
+obs = {
+    "Low": 0,
+    "Medium": 1,
+    "High": 2
+}
+
+sequences = {
+    "O": ["High", "Medium", "Low", "High"],
+    "O1": ["Low", "Medium", "High", "Medium"],
+    "O2": ["High", "High", "High", "High"],
+    "O3": ["Low", "Low", "Low", "Low"],
+    "O4": ["Medium", "Medium", "Medium", "Medium"]
+}
+
+results = []
+
+for name, seq in sequences.items():
+    X = np.array([[obs[x]] for x in seq])
+    log_likelihood = model.score(X)
+    likelihood = np.exp(log_likelihood)
+    results.append([name, seq, log_likelihood, likelihood])
+
+df = pd.DataFrame(results, columns=["Sequence", "Observations", "Log Likelihood", "Likelihood"])
+
+print(df)
